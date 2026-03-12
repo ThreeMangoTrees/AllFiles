@@ -1,12 +1,11 @@
 package com.convertx.heictopdf;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.List;
 
@@ -14,19 +13,23 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(ConversionController.class)
 class ConversionControllerTest {
 
-    @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
     private FileToPdfConversionService conversionService;
+
+    @BeforeEach
+    void setUp() {
+        this.conversionService = mock(FileToPdfConversionService.class);
+        this.mockMvc = MockMvcBuilders.standaloneSetup(new ConversionController(this.conversionService)).build();
+    }
 
     @Test
     void shouldReturnPdfAttachment() throws Exception {

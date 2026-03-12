@@ -2,9 +2,14 @@
 
 Spring Boot application for converting supported files to PDF, compressing PDFs, and merging multiple PDFs.
 
+## Project layout
+
+- `convertx-app`: Spring Boot web application
+- `pdf-compression`: extracted Ghostscript-based PDF compression subproject
+
 ## Requirements
 
-- Java 17+
+- Java 25
 - Maven 3.9+
 - macOS with the built-in `sips` command available
 - LibreOffice installed and `soffice` available on the `PATH` for `docx`, `xlsx`, and `pptx`
@@ -13,10 +18,52 @@ Spring Boot application for converting supported files to PDF, compressing PDFs,
 ## Run
 
 ```bash
-mvn spring-boot:run
+mvn -pl convertx-app -am spring-boot:run
 ```
 
 Open `http://localhost:8081` to use the web UI for convert, compress, and merge operations.
+
+## Local setup
+
+1. Install JDK 25 and make sure both `java` and `mvn` use it.
+2. Verify with:
+
+```bash
+java -version
+mvn -version
+```
+
+3. If Maven is using a different JDK than your shell, export `JAVA_HOME` before running Maven:
+
+```bash
+export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+export PATH="$JAVA_HOME/bin:$PATH"
+```
+
+4. Build from the project root:
+
+```bash
+mvn test
+```
+
+5. Run the app module:
+
+```bash
+mvn -pl convertx-app -am spring-boot:run
+```
+
+6. Confirm required native tools are available:
+
+```bash
+which sips
+which soffice
+which gs
+```
+
+OpenAPI docs:
+
+- Swagger UI: `http://localhost:8081/swagger-ui.html`
+- OpenAPI JSON: `http://localhost:8081/api/docs`
 
 ## API
 

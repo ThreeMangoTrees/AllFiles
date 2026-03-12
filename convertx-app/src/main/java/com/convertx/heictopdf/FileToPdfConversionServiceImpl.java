@@ -1,5 +1,7 @@
 package com.convertx.heictopdf;
 
+import com.convertx.pdfcompression.GhostscriptPdfCompressionService;
+import com.convertx.pdfcompression.PdfCompressionService;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import org.apache.pdfbox.multipdf.PDFMergerUtility;
 import org.apache.pdfbox.io.MemoryUsageSetting;
@@ -47,6 +49,15 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
     private static final float FONT_SIZE = 11f;
     private static final float LEADING = 14f;
     private static final PDType1Font BODY_FONT = PDType1Font.HELVETICA;
+    private final PdfCompressionService pdfCompressionService;
+
+    public FileToPdfConversionServiceImpl() {
+        this(new GhostscriptPdfCompressionService());
+    }
+
+    FileToPdfConversionServiceImpl(PdfCompressionService pdfCompressionService) {
+        this.pdfCompressionService = pdfCompressionService;
+    }
 
     @Override
     public byte[] convert(MultipartFile file) {
@@ -78,26 +89,15 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
     @Override
     public byte[] compressPdf(MultipartFile file, int targetPercentage) {
         validatePdfFile(file);
-        validateCompressionTarget(targetPercentage);
-
-        Path inputFile = null;
-        Path outputFile = null;
         try {
-            inputFile = Files.createTempFile("convertx-compress-input-", ".pdf");
-            outputFile = Files.createTempFile("convertx-compress-output-", ".pdf");
-            file.transferTo(inputFile);
-            byte[] originalBytes = Files.readAllBytes(inputFile);
-            runGhostscriptCompression(inputFile, outputFile, targetPercentage);
-            byte[] compressedBytes = Files.readAllBytes(outputFile);
-            return compressedBytes.length < originalBytes.length ? compressedBytes : originalBytes;
+            return pdfCompressionService.compress(file.getBytes(), targetPercentage);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Compression was interrupted.", ex);
         } catch (IOException ex) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Compression failed: " + ex.getMessage(), ex);
-        } finally {
-            deleteFile(inputFile);
-            deleteFile(outputFile);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
         }
     }
 
@@ -269,49 +269,6 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
         );
     }
 
-    void runGhostscriptCompression(Path inputFile, Path outputFile, int targetPercentage) throws IOException, InterruptedException {
-        CompressionSettings settings = resolveCompressionSettings(targetPercentage);
-        runCommand(
-                new ProcessBuilder(
-                        "gs",
-                        "-sDEVICE=pdfwrite",
-                        "-dCompatibilityLevel=1.4",
-                        "-dPDFSETTINGS=" + settings.profile(),
-                        "-dDownsampleColorImages=true",
-                        "-dDownsampleGrayImages=true",
-                        "-dDownsampleMonoImages=true",
-                        "-dColorImageDownsampleType=/Bicubic",
-                        "-dGrayImageDownsampleType=/Bicubic",
-                        "-dMonoImageDownsampleType=/Subsample",
-                        "-dColorImageResolution=" + settings.imageResolution(),
-                        "-dGrayImageResolution=" + settings.imageResolution(),
-                        "-dMonoImageResolution=" + settings.monoResolution(),
-                        "-dDetectDuplicateImages=true",
-                        "-dCompressFonts=true",
-                        "-dSubsetFonts=true",
-                        "-dNOPAUSE",
-                        "-dQUIET",
-                        "-dBATCH",
-                        "-sOutputFile=" + outputFile,
-                        inputFile.toString()
-                ),
-                "Unable to compress PDF with Ghostscript.",
-                "PDF compression requires Ghostscript with the 'gs' command on the PATH."
-        );
-    }
-
-    CompressionSettings resolveCompressionSettings(int targetPercentage) {
-        return switch (targetPercentage) {
-            case 25 -> new CompressionSettings("/screen", 72, 150);
-            case 50 -> new CompressionSettings("/ebook", 110, 200);
-            case 75 -> new CompressionSettings("/printer", 150, 300);
-            default -> throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Compression target must be one of: 25, 50, 75."
-            );
-        };
-    }
-
     private void runCommand(ProcessBuilder processBuilder, String failureMessage, String missingCommandMessage)
             throws IOException, InterruptedException {
         Process process;
@@ -347,12 +304,6 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
 
     private String readUtf8Text(byte[] bytes) {
         return new String(bytes, StandardCharsets.UTF_8);
-    }
-
-    private void validateCompressionTarget(int targetPercentage) {
-        if (targetPercentage != 25 && targetPercentage != 50 && targetPercentage != 75) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Compression target must be one of: 25, 50, 75.");
-        }
     }
 
     private void validatePdfFile(MultipartFile file) {
@@ -411,20 +362,6 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
                         }
                     });
         }
-    }
-
-    private void deleteFile(Path file) {
-        if (file == null) {
-            return;
-        }
-
-        try {
-            Files.deleteIfExists(file);
-        } catch (IOException ignored) {
-        }
-    }
-
-    record CompressionSettings(String profile, int imageResolution, int monoResolution) {
     }
 
     private String validateAndGetExtension(MultipartFile file) {

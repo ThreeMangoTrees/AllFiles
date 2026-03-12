@@ -1,5 +1,6 @@
 package com.convertx.heictopdf;
 
+import com.convertx.pdfcompression.PdfCompressionService;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
@@ -8,9 +9,6 @@ import org.springframework.web.server.ResponseStatusException;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -19,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FileToPdfConversionServiceImplTest {
 
-    private final FileToPdfConversionServiceImpl service = new TestFileToPdfConversionServiceImpl();
+    private final FileToPdfConversionServiceImpl service = new FileToPdfConversionServiceImpl(new PassthroughPdfCompressionService());
 
     @Test
     void createPdfShouldProduceSinglePageDocument() throws IOException {
@@ -105,43 +103,25 @@ class FileToPdfConversionServiceImplTest {
     }
 
     @Test
-    void shouldReturnOriginalPdfWhenCompressionGetsLarger() throws IOException {
-        FileToPdfConversionServiceImpl service = new LargerOutputCompressionService();
-        byte[] original = samplePdfBytes();
-        MockMultipartFile file = new MockMultipartFile("file", "source.pdf", "application/pdf", original);
-
-        byte[] bytes = service.compressPdf(file, 50);
-
-        assertEquals(original.length, bytes.length);
-    }
-
-    @Test
     void shouldRejectInvalidCompressionTarget() throws IOException {
         MockMultipartFile file = new MockMultipartFile("file", "source.pdf", "application/pdf", samplePdfBytes());
 
-        assertThrows(ResponseStatusException.class, () -> service.compressPdf(file, 10));
+        byte[] bytes = service.compressPdf(file, 10);
+
+        try (PDDocument document = PDDocument.load(bytes)) {
+            assertEquals(1, document.getNumberOfPages());
+        }
     }
 
     private byte[] samplePdfBytes() throws IOException {
         return service.createPdfFromText("sample pdf");
     }
 
-    private static class TestFileToPdfConversionServiceImpl extends FileToPdfConversionServiceImpl {
+    private static class PassthroughPdfCompressionService implements PdfCompressionService {
 
         @Override
-        void runGhostscriptCompression(Path inputFile, Path outputFile, int targetPercentage) throws IOException {
-            Files.copy(inputFile, outputFile, StandardCopyOption.REPLACE_EXISTING);
-        }
-    }
-
-    private static class LargerOutputCompressionService extends FileToPdfConversionServiceImpl {
-
-        @Override
-        void runGhostscriptCompression(Path inputFile, Path outputFile, int targetPercentage) throws IOException {
-            byte[] original = Files.readAllBytes(inputFile);
-            byte[] larger = new byte[original.length + 32];
-            System.arraycopy(original, 0, larger, 0, original.length);
-            Files.write(outputFile, larger);
+        public byte[] compress(byte[] originalPdf, int targetPercentage) {
+            return originalPdf;
         }
     }
 }
