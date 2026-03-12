@@ -106,10 +106,38 @@ class FileToPdfConversionServiceImplTest {
     void shouldRejectInvalidCompressionTarget() throws IOException {
         MockMultipartFile file = new MockMultipartFile("file", "source.pdf", "application/pdf", samplePdfBytes());
 
-        byte[] bytes = service.compressPdf(file, 10);
+        assertThrows(ResponseStatusException.class, () -> service.compressPdf(file, 10));
+    }
+
+    @Test
+    void shouldSkipCompressionWhenTargetIsHundred() throws IOException {
+        byte[] original = samplePdfBytes();
+        MockMultipartFile file = new MockMultipartFile("file", "source.pdf", "application/pdf", original);
+
+        byte[] bytes = service.compressPdf(file, 100);
+
+        assertEquals(original.length, bytes.length);
+    }
+
+    @Test
+    void shouldConvertMergeAndSkipCompressionForHundredPercent() throws IOException {
+        MockMultipartFile textFile = new MockMultipartFile(
+                "files",
+                "notes.txt",
+                "text/plain",
+                "one page".getBytes()
+        );
+        MockMultipartFile pdfFile = new MockMultipartFile(
+                "files",
+                "source.pdf",
+                "application/pdf",
+                samplePdfBytes()
+        );
+
+        byte[] bytes = service.convertMergeAndOptionallyCompress(List.of(textFile, pdfFile), 100);
 
         try (PDDocument document = PDDocument.load(bytes)) {
-            assertEquals(1, document.getNumberOfPages());
+            assertEquals(2, document.getNumberOfPages());
         }
     }
 

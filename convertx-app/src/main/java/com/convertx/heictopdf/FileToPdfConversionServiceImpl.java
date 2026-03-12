@@ -31,6 +31,7 @@ import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -45,6 +46,7 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
     private static final Set<String> SUPPORTED_EXTENSIONS = Set.of(
             "docx", "xlsx", "jpg", "jpeg", "pptx", "tiff", "gif", "bmp", "txt", "rtf", "html", "htm", "heic"
     );
+    private static final Set<Integer> COMPRESSION_TARGETS = Set.of(25, 50, 75, 100);
     private static final float PAGE_MARGIN = 40f;
     private static final float FONT_SIZE = 11f;
     private static final float LEADING = 14f;
@@ -89,7 +91,11 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
     @Override
     public byte[] compressPdf(MultipartFile file, int targetPercentage) {
         validatePdfFile(file);
+        validateCompressionTarget(targetPercentage);
         try {
+            if (targetPercentage == 100) {
+                return file.getBytes();
+            }
             return pdfCompressionService.compress(file.getBytes(), targetPercentage);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
@@ -107,19 +113,61 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "At least two PDF files are required for merging.");
         }
 
+        try {
+            List<byte[]> pdfBytes = new ArrayList<>(files.size());
+            for (MultipartFile file : files) {
+                validatePdfFile(file);
+                pdfBytes.add(file.getBytes());
+            }
+            return mergePdfBytes(pdfBytes);
+        } catch (IOException ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Merge failed: " + ex.getMessage(), ex);
+        }
+    }
+
+    @Override
+    public byte[] convertMergeAndOptionallyCompress(List<MultipartFile> files, int targetPercentage) {
+        if (files == null || files.size() < 2) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "At least two files are required for the combined convert, merge, and compress operation."
+            );
+        }
+
+        validateCompressionTarget(targetPercentage);
+
+        List<byte[]> pdfBytes = new ArrayList<>(files.size());
+        for (MultipartFile file : files) {
+            pdfBytes.add(asPdfBytes(file));
+        }
+
+        byte[] mergedPdf;
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             PDFMergerUtility merger = new PDFMergerUtility();
             merger.setDestinationStream(outputStream);
 
-            for (MultipartFile file : files) {
-                validatePdfFile(file);
-                merger.addSource(new ByteArrayInputStream(file.getBytes()));
+            for (byte[] pdf : pdfBytes) {
+                merger.addSource(new ByteArrayInputStream(pdf));
             }
-
             merger.mergeDocuments(MemoryUsageSetting.setupMainMemoryOnly());
-            return outputStream.toByteArray();
+            mergedPdf = outputStream.toByteArray();
         } catch (IOException ex) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Merge failed: " + ex.getMessage(), ex);
+        }
+
+        if (targetPercentage == 100) {
+            return mergedPdf;
+        }
+
+        try {
+            return pdfCompressionService.compress(mergedPdf, targetPercentage);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Compression was interrupted.", ex);
+        } catch (IOException ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Compression failed: " + ex.getMessage(), ex);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
         }
     }
 
@@ -306,6 +354,19 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
         return new String(bytes, StandardCharsets.UTF_8);
     }
 
+    private byte[] asPdfBytes(MultipartFile file) {
+        String extension = getExtension(file);
+        try {
+            if ("pdf".equals(extension)) {
+                validatePdfFile(file);
+                return file.getBytes();
+            }
+        } catch (IOException ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Unable to read PDF input.", ex);
+        }
+        return convert(file);
+    }
+
     private void validatePdfFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A PDF file is required.");
@@ -314,6 +375,29 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
         String filename = file.getOriginalFilename();
         if (filename == null || !filename.toLowerCase(Locale.ROOT).endsWith(".pdf")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only .pdf files are supported for this operation.");
+        }
+    }
+
+    private void validateCompressionTarget(int targetPercentage) {
+        if (!COMPRESSION_TARGETS.contains(targetPercentage)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Compression target must be one of: 25, 50, 75, 100."
+            );
+        }
+    }
+
+    private byte[] mergePdfBytes(List<byte[]> pdfBytes) throws IOException {
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            PDFMergerUtility merger = new PDFMergerUtility();
+            merger.setDestinationStream(outputStream);
+
+            for (byte[] pdf : pdfBytes) {
+                merger.addSource(new ByteArrayInputStream(pdf));
+            }
+
+            merger.mergeDocuments(MemoryUsageSetting.setupMainMemoryOnly());
+            return outputStream.toByteArray();
         }
     }
 
@@ -365,6 +449,18 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
     }
 
     private String validateAndGetExtension(MultipartFile file) {
+        String extension = getExtension(file);
+        if (!SUPPORTED_EXTENSIONS.contains(extension)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Unsupported file type. Supported extensions: " + String.join(", ", SUPPORTED_EXTENSIONS)
+            );
+        }
+
+        return extension;
+    }
+
+    private String getExtension(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A supported file is required.");
         }
@@ -374,14 +470,6 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The uploaded file must include a valid extension.");
         }
 
-        String extension = filename.substring(filename.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);
-        if (!SUPPORTED_EXTENSIONS.contains(extension)) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Unsupported file type. Supported extensions: " + String.join(", ", SUPPORTED_EXTENSIONS)
-            );
-        }
-
-        return extension;
+        return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);
     }
 }

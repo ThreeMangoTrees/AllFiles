@@ -14,6 +14,11 @@
     <name>convertx-app</name>
     <description>Spring Boot application module for ConvertX</description>
 
+    <properties>
+        <spring-boot.run.skip>false</spring-boot.run.skip>
+        <start-class>com.convertx.heictopdf.FileToPdfApplication</start-class>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -47,6 +52,12 @@
             <groupId>com.convertx</groupId>
             <artifactId>pdf-compression</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <scope>runtime</scope>
+            <optional>true</optional>
         </dependency>
 
         <dependency>

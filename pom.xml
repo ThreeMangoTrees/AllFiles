@@ -19,6 +19,7 @@
 
     <properties>
         <java.version>25</java.version>
+        <spring-boot.run.skip>true</spring-boot.run.skip>
     </properties>
 
     <modules>

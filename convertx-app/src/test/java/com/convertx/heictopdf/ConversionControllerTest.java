@@ -91,4 +91,30 @@ class ConversionControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF))
                 .andExpect(header().string("Content-Disposition", "attachment; filename=\"merged.pdf\""));
     }
+
+    @Test
+    void shouldReturnCombinedPdfAttachment() throws Exception {
+        MockMultipartFile first = new MockMultipartFile(
+                "files",
+                "notes.txt",
+                "text/plain",
+                "note".getBytes()
+        );
+        MockMultipartFile second = new MockMultipartFile(
+                "files",
+                "source.pdf",
+                "application/pdf",
+                "pdf".getBytes()
+        );
+
+        given(conversionService.convertMergeAndOptionallyCompress(anyList(), anyInt())).willReturn("pdf".getBytes());
+
+        mockMvc.perform(multipart("/api/pdf/convert-merge-compress")
+                        .file(first)
+                        .file(second)
+                        .param("targetPercentage", "100"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF))
+                .andExpect(header().string("Content-Disposition", "attachment; filename=\"combined.pdf\""));
+    }
 }

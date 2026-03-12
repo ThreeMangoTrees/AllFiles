@@ -11,4 +11,6 @@ public interface FileToPdfConversionService {
     byte[] compressPdf(MultipartFile file, int targetPercentage);
 
     byte[] mergePdfs(List<MultipartFile> files);
+
+    byte[] convertMergeAndOptionallyCompress(List<MultipartFile> files, int targetPercentage);
 }

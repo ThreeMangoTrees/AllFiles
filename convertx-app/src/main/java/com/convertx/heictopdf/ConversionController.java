@@ -84,6 +84,23 @@ public class ConversionController {
         return pdfAttachment(pdfBytes, "merged.pdf");
     }
 
+    @PostMapping(path = "/api/pdf/convert-merge-compress", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+            summary = "Convert mixed files to PDF, merge them, and optionally compress",
+            description = "Accepts two or more files in original order. Non-PDF files are converted to PDF, all PDFs are merged, and the merged result is compressed when the target is 25, 50, or 75. A target of 100 skips compression.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Combined PDF returned"),
+                    @ApiResponse(responseCode = "400", description = "Invalid files or compression target")
+            }
+    )
+    public ResponseEntity<byte[]> convertMergeAndCompress(
+            @RequestParam("files") List<MultipartFile> files,
+            @RequestParam("targetPercentage") int targetPercentage
+    ) {
+        byte[] pdfBytes = conversionService.convertMergeAndOptionallyCompress(files, targetPercentage);
+        return pdfAttachment(pdfBytes, "combined.pdf");
+    }
+
     private String extractBaseName(String filename) {
         if (filename == null || filename.isBlank()) {
             return "converted";
