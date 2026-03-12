@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConvertX PDF Tools</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #f2efe8;
+            --card: #fffdf8;
+            --ink: #1f2933;
+            --accent: #b85042;
+            --accent-dark: #8f3d34;
+            --line: #ded6c8;
+            --muted: #6c6f74;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Georgia, "Times New Roman", serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at top left, rgba(184, 80, 66, 0.18), transparent 30%),
+                linear-gradient(135deg, #f8f3ea, var(--bg));
+            padding: 24px;
+        }
+
+        main {
+            width: min(1080px, 100%);
+            margin: 0 auto;
+        }
+
+        .hero {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 28px;
+            padding: 32px;
+            box-shadow: 0 18px 50px rgba(31, 41, 51, 0.08);
+        }
+
+        h1 {
+            margin: 0 0 12px;
+            font-size: clamp(2.6rem, 7vw, 4.6rem);
+            line-height: 0.95;
+        }
+
+        .intro {
+            max-width: 760px;
+            font-size: 1.05rem;
+            line-height: 1.6;
+            color: var(--muted);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 22px;
+        }
+
+        .tool-card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: 0 18px 50px rgba(31, 41, 51, 0.08);
+        }
+
+        .eyebrow {
+            margin: 0 0 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            font-size: 0.75rem;
+            color: var(--accent);
+        }
+
+        h2 {
+            margin: 0 0 12px;
+            font-size: 1.8rem;
+        }
+
+        p {
+            line-height: 1.6;
+            color: var(--muted);
+        }
+
+        form {
+            display: grid;
+            gap: 14px;
+            margin-top: 18px;
+        }
+
+        input[type="file"],
+        select {
+            width: 100%;
+            border: 1px dashed var(--line);
+            border-radius: 18px;
+            padding: 16px;
+            background: #faf7f1;
+            font: inherit;
+            color: var(--ink);
+        }
+
+        button {
+            width: fit-content;
+            border: 0;
+            border-radius: 999px;
+            background: var(--accent);
+            color: white;
+            padding: 14px 22px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: var(--accent-dark);
+        }
+
+        .status {
+            min-height: 24px;
+            font-size: 0.95rem;
+            color: var(--muted);
+        }
+
+        .hint {
+            font-size: 0.9rem;
+            color: var(--muted);
+        }
+    </style>
+</head>
+<body>
+<main>
+    <section class="hero">
+        <p class="eyebrow">ConvertX</p>
+        <h1>Convert, compress, and merge PDFs.</h1>
+        <p class="intro">Turn common files into PDF, compress an existing PDF with 25%, 50%, or 75% compression profiles, or merge two or more PDFs into one document.</p>
+    </section>
+
+    <section class="grid">
+        <article class="tool-card">
+            <p class="eyebrow">Convert</p>
+            <h2>Any supported file to PDF</h2>
+            <p>Accepts <code>docx</code>, <code>xlsx</code>, <code>pptx</code>, <code>jpg</code>, <code>jpeg</code>, <code>tiff</code>, <code>gif</code>, <code>bmp</code>, <code>txt</code>, <code>rtf</code>, <code>html</code>, <code>htm</code>, and <code>heic</code>.</p>
+            <form id="convertForm">
+                <input id="convertFile" type="file" name="file" accept=".docx,.xlsx,.jpg,.jpeg,.pptx,.tiff,.gif,.bmp,.txt,.rtf,.html,.htm,.heic,image/heic,image/jpeg,image/tiff,image/gif,image/bmp" required>
+                <button type="submit">Convert File</button>
+                <div id="convertStatus" class="status"></div>
+            </form>
+        </article>
+
+        <article class="tool-card">
+            <p class="eyebrow">Compress</p>
+            <h2>Reduce a PDF</h2>
+            <p>Upload one PDF and choose a compression profile. Higher compression usually means lower fidelity.</p>
+            <form id="compressForm">
+                <input id="compressFile" type="file" name="file" accept=".pdf,application/pdf" required>
+                <select id="targetPercentage" name="targetPercentage">
+                    <option value="25">25% size profile</option>
+                    <option value="50">50% size profile</option>
+                    <option value="75">75% size profile</option>
+                </select>
+                <button type="submit">Compress PDF</button>
+                <div class="hint">Compression uses Ghostscript profiles. Output size is approximate, not guaranteed exact.</div>
+                <div id="compressStatus" class="status"></div>
+            </form>
+        </article>
+
+        <article class="tool-card">
+            <p class="eyebrow">Merge</p>
+            <h2>Combine multiple PDFs</h2>
+            <p>Upload two or more PDFs. Files are merged in the order you select them.</p>
+            <form id="mergeForm">
+                <input id="mergeFiles" type="file" name="files" accept=".pdf,application/pdf" multiple required>
+                <button type="submit">Merge PDFs</button>
+                <div id="mergeStatus" class="status"></div>
+            </form>
+        </article>
+    </section>
+</main>
+
+<script>
+    async function downloadResponse(response, filename) {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(url);
+    }
+
+    async function submitForm(options) {
+        const { form, status, buildRequest, filenameResolver, busyText, doneText } = options;
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            try {
+                const request = buildRequest();
+                if (!request) {
+                    return;
+                }
+
+                status.textContent = busyText;
+                const response = await fetch(request.url, {
+                    method: 'POST',
+                    body: request.body
+                });
+
+                if (!response.ok) {
+                    status.textContent = await response.text();
+                    return;
+                }
+
+                await downloadResponse(response, filenameResolver());
+                status.textContent = doneText;
+            } catch (error) {
+                status.textContent = error.message || 'Request failed.';
+            }
+        });
+    }
+
+    const convertFile = document.getElementById('convertFile');
+    submitForm({
+        form: document.getElementById('convertForm'),
+        status: document.getElementById('convertStatus'),
+        buildRequest: () => {
+            if (!convertFile.files.length) {
+                document.getElementById('convertStatus').textContent = 'Select a supported file first.';
+                return null;
+            }
+            const body = new FormData();
+            body.append('file', convertFile.files[0]);
+            return { url: '/api/convert/to-pdf', body };
+        },
+        filenameResolver: () => convertFile.files[0].name.replace(/\.[^.]+$/i, '') + '.pdf',
+        busyText: 'Converting...',
+        doneText: 'PDF downloaded.'
+    });
+
+    const compressFile = document.getElementById('compressFile');
+    const targetPercentage = document.getElementById('targetPercentage');
+    submitForm({
+        form: document.getElementById('compressForm'),
+        status: document.getElementById('compressStatus'),
+        buildRequest: () => {
+            if (!compressFile.files.length) {
+                document.getElementById('compressStatus').textContent = 'Select a PDF first.';
+                return null;
+            }
+            const body = new FormData();
+            body.append('file', compressFile.files[0]);
+            body.append('targetPercentage', targetPercentage.value);
+            return { url: '/api/pdf/compress', body };
+        },
+        filenameResolver: () => compressFile.files[0].name.replace(/\.pdf$/i, '') + '-compressed-' + targetPercentage.value + '.pdf',
+        busyText: 'Compressing...',
+        doneText: 'Compressed PDF downloaded.'
+    });
+
+    const mergeFiles = document.getElementById('mergeFiles');
+    submitForm({
+        form: document.getElementById('mergeForm'),
+        status: document.getElementById('mergeStatus'),
+        buildRequest: () => {
+            if (mergeFiles.files.length < 2) {
+                document.getElementById('mergeStatus').textContent = 'Select at least two PDF files.';
+                return null;
+            }
+            const body = new FormData();
+            for (const file of mergeFiles.files) {
+                body.append('files', file);
+            }
+            return { url: '/api/pdf/merge', body };
+        },
+        filenameResolver: () => 'merged.pdf',
+        busyText: 'Merging...',
+        doneText: 'Merged PDF downloaded.'
+    });
+</script>
+</body>
+</html>
