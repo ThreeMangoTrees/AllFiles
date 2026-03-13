@@ -6,6 +6,7 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -28,7 +29,9 @@ class ConversionControllerTest {
     @BeforeEach
     void setUp() {
         this.conversionService = mock(FileToPdfConversionService.class);
-        this.mockMvc = MockMvcBuilders.standaloneSetup(new ConversionController(this.conversionService)).build();
+        this.mockMvc = MockMvcBuilders.standaloneSetup(new ConversionController(this.conversionService))
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
     }
 
     @Test
@@ -116,5 +119,65 @@ class ConversionControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF))
                 .andExpect(header().string("Content-Disposition", "attachment; filename=\"combined.pdf\""));
+    }
+
+    @Test
+    void shouldReturnRotatedPdfAttachment() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "source.pdf",
+                "application/pdf",
+                "pdf".getBytes()
+        );
+
+        given(conversionService.rotateFile(any(), anyInt()))
+                .willReturn(new FileToPdfConversionService.ProcessedFile("pdf".getBytes(), "source-rotated-90.pdf", "application/pdf"));
+
+        mockMvc.perform(multipart("/api/pdf/rotate")
+                        .file(file)
+                        .param("anticlockwiseDegrees", "90"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF))
+                .andExpect(header().string("Content-Disposition", "attachment; filename=\"source-rotated-90.pdf\""));
+    }
+
+    @Test
+    void shouldReturnRotatedImageAttachmentInOriginalFormat() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "photo.jpg",
+                "image/jpeg",
+                "jpg".getBytes()
+        );
+
+        given(conversionService.rotateFile(any(), anyInt()))
+                .willReturn(new FileToPdfConversionService.ProcessedFile("jpg".getBytes(), "photo-rotated-90.jpg", "image/jpeg"));
+
+        mockMvc.perform(multipart("/api/pdf/rotate")
+                        .file(file)
+                        .param("anticlockwiseDegrees", "90"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.IMAGE_JPEG))
+                .andExpect(header().string("Content-Disposition", "attachment; filename=\"photo-rotated-90.jpg\""));
+    }
+
+    @Test
+    void shouldReturnMeaningfulErrorMessageWhenActionFails() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "source.pdf",
+                "application/pdf",
+                "pdf".getBytes()
+        );
+
+        given(conversionService.compressPdf(any(), anyInt()))
+                .willThrow(new ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Only valid PDF files can be compressed."));
+
+        mockMvc.perform(multipart("/api/pdf/compress")
+                        .file(file)
+                        .param("targetPercentage", "50"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_PLAIN))
+                .andExpect(content().string("Only valid PDF files can be compressed."));
     }
 }

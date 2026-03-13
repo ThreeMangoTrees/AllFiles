@@ -197,6 +197,22 @@
         </article>
 
         <article class="tool-card">
+            <p class="eyebrow">Rotate</p>
+            <h2>Rotate PDFs, images, and text files</h2>
+            <p>Upload a PDF, image, or text file and rotate it anti-clockwise by 90, 180, or 270 degrees. Images stay in the same format, while text files are converted to PDF first.</p>
+            <form id="rotateForm">
+                <input id="rotateFile" type="file" name="file" accept=".pdf,.jpg,.jpeg,.tiff,.gif,.bmp,.heic,.txt,.rtf,.html,.htm,application/pdf,image/heic,image/jpeg,image/tiff,image/gif,image/bmp,text/plain,text/html,application/rtf" required>
+                <select id="anticlockwiseDegrees" name="anticlockwiseDegrees">
+                    <option value="90">90 degrees anti-clockwise</option>
+                    <option value="180">180 degrees anti-clockwise</option>
+                    <option value="270">270 degrees anti-clockwise</option>
+                </select>
+                <button type="submit">Rotate File</button>
+                <div id="rotateStatus" class="status"></div>
+            </form>
+        </article>
+
+        <article class="tool-card">
             <p class="eyebrow">Compress</p>
             <h2>Reduce a PDF</h2>
             <p>Upload one PDF and choose a compression profile. Higher compression usually means lower fidelity.</p>
@@ -234,6 +250,21 @@
         return filename.replace(/\.[^.]+$/i, '');
     }
 
+    function filenameFromResponse(response) {
+        const contentDisposition = response.headers.get('Content-Disposition');
+        if (!contentDisposition) {
+            return null;
+        }
+
+        const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+        if (utf8Match) {
+            return decodeURIComponent(utf8Match[1]);
+        }
+
+        const asciiMatch = contentDisposition.match(/filename=\"?([^\";]+)\"?/i);
+        return asciiMatch ? asciiMatch[1] : null;
+    }
+
     async function downloadResponse(response, filename) {
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
@@ -267,7 +298,8 @@
                     return;
                 }
 
-                await downloadResponse(response, filenameResolver());
+                const responseFilename = filenameFromResponse(response);
+                await downloadResponse(response, responseFilename || filenameResolver());
                 status.textContent = doneText;
             } catch (error) {
                 status.textContent = error.message || 'Request failed.';
@@ -317,6 +349,26 @@
         filenameResolver: () => baseName(convertFile.files[0].name, 'converted') + '.pdf',
         busyText: 'Converting...',
         doneText: 'PDF downloaded.'
+    });
+
+    const rotateFile = document.getElementById('rotateFile');
+    const anticlockwiseDegrees = document.getElementById('anticlockwiseDegrees');
+    submitForm({
+        form: document.getElementById('rotateForm'),
+        status: document.getElementById('rotateStatus'),
+        buildRequest: () => {
+            if (!rotateFile.files.length) {
+                document.getElementById('rotateStatus').textContent = 'Select a supported file first.';
+                return null;
+            }
+            const body = new FormData();
+            body.append('file', rotateFile.files[0]);
+            body.append('anticlockwiseDegrees', anticlockwiseDegrees.value);
+            return { url: '/api/pdf/rotate', body };
+        },
+        filenameResolver: () => rotateFile.files[0].name,
+        busyText: 'Rotating...',
+        doneText: 'Rotated file downloaded.'
     });
 
     const compressFile = document.getElementById('compressFile');

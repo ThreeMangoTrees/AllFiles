@@ -3,6 +3,8 @@ package com.convertx.heictopdf;
 import com.convertx.pdfcompression.GhostscriptPdfCompressionService;
 import com.convertx.pdfcompression.PdfCompressionService;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.pdfbox.multipdf.PDFMergerUtility;
 import org.apache.pdfbox.io.MemoryUsageSetting;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -21,6 +23,9 @@ import javax.imageio.ImageIO;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 import javax.swing.text.rtf.RTFEditorKit;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -39,14 +44,17 @@ import java.util.Set;
 @Service
 public class FileToPdfConversionServiceImpl implements FileToPdfConversionService {
 
+    private static final Logger log = LoggerFactory.getLogger(FileToPdfConversionServiceImpl.class);
     private static final Set<String> IMAGE_EXTENSIONS = Set.of("heic", "jpg", "jpeg", "tiff", "gif", "bmp");
     private static final Set<String> HTML_EXTENSIONS = Set.of("html", "htm");
     private static final Set<String> TEXT_EXTENSIONS = Set.of("txt", "rtf");
     private static final Set<String> LIBREOFFICE_EXTENSIONS = Set.of("docx", "xlsx", "pptx");
+    private static final Set<String> ROTATABLE_IMAGE_EXTENSIONS = Set.of("heic", "jpg", "jpeg", "tiff", "gif", "bmp");
     private static final Set<String> SUPPORTED_EXTENSIONS = Set.of(
             "docx", "xlsx", "jpg", "jpeg", "pptx", "tiff", "gif", "bmp", "txt", "rtf", "html", "htm", "heic"
     );
     private static final Set<Integer> COMPRESSION_TARGETS = Set.of(25, 50, 75, 100);
+    private static final Set<Integer> ROTATION_TARGETS = Set.of(90, 180, 270);
     private static final float PAGE_MARGIN = 40f;
     private static final float FONT_SIZE = 11f;
     private static final float LEADING = 14f;
@@ -64,6 +72,7 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
     @Override
     public byte[] convert(MultipartFile file) {
         String extension = validateAndGetExtension(file);
+        log.info("Starting conversion for file {} with extension {}", safeFilename(file), extension);
 
         try {
             if (IMAGE_EXTENSIONS.contains(extension)) {
@@ -80,8 +89,10 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
             }
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
+            log.error("Conversion interrupted for file {}", safeFilename(file), ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Conversion was interrupted.", ex);
         } catch (IOException ex) {
+            log.error("Conversion failed for file {}", safeFilename(file), ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Conversion failed: " + ex.getMessage(), ex);
         }
 
@@ -92,17 +103,22 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
     public byte[] compressPdf(MultipartFile file, int targetPercentage) {
         validatePdfFile(file);
         validateCompressionTarget(targetPercentage);
+        log.info("Starting compression for file {} with target {}", safeFilename(file), targetPercentage);
         try {
             if (targetPercentage == 100) {
+                log.info("Skipping compression for file {} because target is 100", safeFilename(file));
                 return file.getBytes();
             }
             return pdfCompressionService.compress(file.getBytes(), targetPercentage);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
+            log.error("Compression interrupted for file {}", safeFilename(file), ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Compression was interrupted.", ex);
         } catch (IOException ex) {
+            log.error("Compression failed for file {}", safeFilename(file), ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Compression failed: " + ex.getMessage(), ex);
         } catch (IllegalArgumentException ex) {
+            log.warn("Compression rejected for file {}: {}", safeFilename(file), ex.getMessage());
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
         }
     }
@@ -113,6 +129,7 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "At least two PDF files are required for merging.");
         }
 
+        log.info("Starting merge for {} files", files.size());
         try {
             List<byte[]> pdfBytes = new ArrayList<>(files.size());
             for (MultipartFile file : files) {
@@ -121,6 +138,7 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
             }
             return mergePdfBytes(pdfBytes);
         } catch (IOException ex) {
+            log.error("Merge failed for {} files", files.size(), ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Merge failed: " + ex.getMessage(), ex);
         }
     }
@@ -135,6 +153,7 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
         }
 
         validateCompressionTarget(targetPercentage);
+        log.info("Starting combined workflow for {} files with target {}", files.size(), targetPercentage);
 
         List<byte[]> pdfBytes = new ArrayList<>(files.size());
         for (MultipartFile file : files) {
@@ -152,10 +171,12 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
             merger.mergeDocuments(MemoryUsageSetting.setupMainMemoryOnly());
             mergedPdf = outputStream.toByteArray();
         } catch (IOException ex) {
+            log.error("Merge step failed in combined workflow for {} files", files.size(), ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Merge failed: " + ex.getMessage(), ex);
         }
 
         if (targetPercentage == 100) {
+            log.info("Skipping compression in combined workflow because target is 100");
             return mergedPdf;
         }
 
@@ -163,12 +184,41 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
             return pdfCompressionService.compress(mergedPdf, targetPercentage);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
+            log.error("Compression interrupted in combined workflow", ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Compression was interrupted.", ex);
         } catch (IOException ex) {
+            log.error("Compression failed in combined workflow", ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Compression failed: " + ex.getMessage(), ex);
         } catch (IllegalArgumentException ex) {
+            log.warn("Combined workflow rejected compression target {}: {}", targetPercentage, ex.getMessage());
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
         }
+    }
+
+    @Override
+    public ProcessedFile rotateFile(MultipartFile file, int anticlockwiseDegrees) {
+        validateRotationTarget(anticlockwiseDegrees);
+        log.info("Starting rotation for file {} by {} degrees anti-clockwise", safeFilename(file), anticlockwiseDegrees);
+
+        String extension = getExtension(file);
+        String baseName = extractBaseName(file.getOriginalFilename());
+
+        if ("pdf".equals(extension)) {
+            return rotatePdfFile(file, anticlockwiseDegrees, baseName);
+        }
+
+        if (ROTATABLE_IMAGE_EXTENSIONS.contains(extension)) {
+            return rotateImageFile(file, extension, anticlockwiseDegrees, baseName);
+        }
+
+        if (TEXT_EXTENSIONS.contains(extension) || HTML_EXTENSIONS.contains(extension)) {
+            return rotateConvertedPdf(file, anticlockwiseDegrees, baseName);
+        }
+
+        throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Rotation is supported for PDFs, images, and text files. Text files are converted to PDF before rotation."
+        );
     }
 
     byte[] createPdfFromImage(BufferedImage image) throws IOException {
@@ -309,6 +359,83 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
         );
     }
 
+    private ProcessedFile rotatePdfFile(MultipartFile file, int anticlockwiseDegrees, String baseName) {
+        try {
+            return rotatePdfBytes(file.getBytes(), anticlockwiseDegrees, baseName);
+        } catch (IOException ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Rotation failed: " + ex.getMessage(), ex);
+        }
+    }
+
+    private ProcessedFile rotateConvertedPdf(MultipartFile file, int anticlockwiseDegrees, String baseName) {
+        byte[] pdfBytes = convert(file);
+        return rotatePdfBytes(pdfBytes, anticlockwiseDegrees, baseName);
+    }
+
+    private ProcessedFile rotatePdfBytes(byte[] pdfBytes, int anticlockwiseDegrees, String baseName) {
+        try (PDDocument document = PDDocument.load(pdfBytes);
+             ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            int clockwiseRotation = normalizeClockwiseRotation(anticlockwiseDegrees);
+            for (PDPage page : document.getPages()) {
+                int currentRotation = page.getRotation();
+                page.setRotation((currentRotation + clockwiseRotation) % 360);
+            }
+            document.save(outputStream);
+            return new ProcessedFile(outputStream.toByteArray(), baseName + "-rotated-" + anticlockwiseDegrees + ".pdf", "application/pdf");
+        } catch (IOException ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Rotation failed: " + ex.getMessage(), ex);
+        }
+    }
+
+    private ProcessedFile rotateImageFile(MultipartFile file, String extension, int anticlockwiseDegrees, String baseName) {
+        try {
+            byte[] rotatedBytes = "heic".equals(extension)
+                    ? rotateHeic(file, anticlockwiseDegrees)
+                    : rotateRasterImage(file, extension, anticlockwiseDegrees);
+            return new ProcessedFile(rotatedBytes, baseName + "-rotated-" + anticlockwiseDegrees + "." + extension, contentTypeForExtension(extension));
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Rotation was interrupted.", ex);
+        } catch (IOException ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Rotation failed: " + ex.getMessage(), ex);
+        }
+    }
+
+    private byte[] rotateRasterImage(MultipartFile file, String extension, int anticlockwiseDegrees) throws IOException {
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(file.getBytes());
+             ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            BufferedImage image = ImageIO.read(inputStream);
+            if (image == null) {
+                throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "The image file could not be decoded.");
+            }
+
+            BufferedImage rotated = rotateBufferedImage(image, anticlockwiseDegrees, "jpg".equals(extension) || "jpeg".equals(extension));
+            if (!ImageIO.write(rotated, extension, outputStream)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unable to write the rotated image as ." + extension + ".");
+            }
+            return outputStream.toByteArray();
+        }
+    }
+
+    private byte[] rotateHeic(MultipartFile file, int anticlockwiseDegrees) throws IOException, InterruptedException {
+        Path inputFile = Files.createTempFile("convertx-rotate-input-", ".heic");
+        Path outputFile = Files.createTempFile("convertx-rotate-output-", ".heic");
+
+        try {
+            file.transferTo(inputFile);
+            int clockwiseRotation = normalizeClockwiseRotation(anticlockwiseDegrees);
+            runCommand(
+                    new ProcessBuilder("sips", "-r", String.valueOf(clockwiseRotation), inputFile.toString(), "--out", outputFile.toString()),
+                    "Unable to rotate HEIC input with sips.",
+                    "HEIC rotation requires the macOS 'sips' command."
+            );
+            return Files.readAllBytes(outputFile);
+        } finally {
+            Files.deleteIfExists(inputFile);
+            Files.deleteIfExists(outputFile);
+        }
+    }
+
     private void runLibreOfficeConversion(Path inputFile, Path outputDir, String extension) throws IOException, InterruptedException {
         runCommand(
                 new ProcessBuilder("soffice", "--headless", "--convert-to", "pdf", "--outdir", outputDir.toString(), inputFile.toString()),
@@ -385,6 +512,55 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
                     "Compression target must be one of: 25, 50, 75, 100."
             );
         }
+    }
+
+    private void validateRotationTarget(int anticlockwiseDegrees) {
+        if (!ROTATION_TARGETS.contains(anticlockwiseDegrees)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Rotation must be one of: 90, 180, 270 degrees anti-clockwise."
+            );
+        }
+    }
+
+    private int normalizeClockwiseRotation(int anticlockwiseDegrees) {
+        return Math.floorMod(360 - anticlockwiseDegrees, 360);
+    }
+
+    private BufferedImage rotateBufferedImage(BufferedImage source, int anticlockwiseDegrees, boolean forceRgb) {
+        int width = source.getWidth();
+        int height = source.getHeight();
+        int resultWidth = anticlockwiseDegrees == 180 ? width : height;
+        int resultHeight = anticlockwiseDegrees == 180 ? height : width;
+        int imageType = forceRgb ? BufferedImage.TYPE_INT_RGB
+                : source.getType() == BufferedImage.TYPE_CUSTOM ? BufferedImage.TYPE_INT_ARGB : source.getType();
+
+        BufferedImage rotated = new BufferedImage(resultWidth, resultHeight, imageType);
+        Graphics2D graphics = rotated.createGraphics();
+        try {
+            graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+            AffineTransform transform = new AffineTransform();
+            switch (anticlockwiseDegrees) {
+                case 90 -> {
+                    transform.translate(0, width);
+                    transform.rotate(Math.toRadians(-90));
+                }
+                case 180 -> {
+                    transform.translate(width, height);
+                    transform.rotate(Math.toRadians(180));
+                }
+                case 270 -> {
+                    transform.translate(height, 0);
+                    transform.rotate(Math.toRadians(90));
+                }
+                default -> throw new IllegalArgumentException("Unsupported rotation.");
+            }
+            graphics.drawImage(source, transform, null);
+        } finally {
+            graphics.dispose();
+        }
+        return rotated;
     }
 
     private byte[] mergePdfBytes(List<byte[]> pdfBytes) throws IOException {
@@ -471,5 +647,31 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
         }
 
         return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);
+    }
+
+    private String extractBaseName(String filename) {
+        if (filename == null || filename.isBlank()) {
+            return "file";
+        }
+
+        int extensionIndex = filename.lastIndexOf('.');
+        return extensionIndex > 0 ? filename.substring(0, extensionIndex) : filename;
+    }
+
+    private String contentTypeForExtension(String extension) {
+        return switch (extension) {
+            case "pdf" -> "application/pdf";
+            case "jpg", "jpeg" -> "image/jpeg";
+            case "tiff" -> "image/tiff";
+            case "gif" -> "image/gif";
+            case "bmp" -> "image/bmp";
+            case "heic" -> "image/heic";
+            default -> "application/octet-stream";
+        };
+    }
+
+    private String safeFilename(MultipartFile file) {
+        String filename = file == null ? null : file.getOriginalFilename();
+        return filename == null || filename.isBlank() ? "<unnamed>" : filename;
     }
 }

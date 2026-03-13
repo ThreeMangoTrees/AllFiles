@@ -4,6 +4,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -24,6 +26,7 @@ import java.util.List;
 @Tag(name = "PDF Tools", description = "Convert, compress, and merge PDF files")
 public class ConversionController {
 
+    private static final Logger log = LoggerFactory.getLogger(ConversionController.class);
     private final FileToPdfConversionService conversionService;
 
     public ConversionController(FileToPdfConversionService conversionService) {
@@ -33,6 +36,7 @@ public class ConversionController {
     @GetMapping("/api/health")
     @Operation(summary = "Health check", description = "Simple endpoint to confirm the service is running.")
     public String health() {
+        log.debug("Health check requested.");
         return "ok";
     }
 
@@ -46,9 +50,10 @@ public class ConversionController {
             }
     )
     public ResponseEntity<byte[]> convert(@RequestParam("file") @NotNull MultipartFile file) {
+        log.info("Convert requested for file {}", safeFilename(file));
         byte[] pdfBytes = conversionService.convert(file);
         String baseName = extractBaseName(file.getOriginalFilename());
-
+        log.info("Convert completed for file {}", safeFilename(file));
         return pdfAttachment(pdfBytes, baseName + ".pdf");
     }
 
@@ -65,8 +70,10 @@ public class ConversionController {
             @RequestParam("file") @NotNull MultipartFile file,
             @RequestParam("targetPercentage") int targetPercentage
     ) {
+        log.info("Compress requested for file {} with target {}", safeFilename(file), targetPercentage);
         byte[] pdfBytes = conversionService.compressPdf(file, targetPercentage);
         String baseName = extractBaseName(file.getOriginalFilename());
+        log.info("Compress completed for file {} with target {}", safeFilename(file), targetPercentage);
         return pdfAttachment(pdfBytes, baseName + "-compressed-" + targetPercentage + ".pdf");
     }
 
@@ -80,7 +87,9 @@ public class ConversionController {
             }
     )
     public ResponseEntity<byte[]> merge(@RequestParam("files") List<MultipartFile> files) {
+        log.info("Merge requested for {} files", files == null ? 0 : files.size());
         byte[] pdfBytes = conversionService.mergePdfs(files);
+        log.info("Merge completed for {} files", files == null ? 0 : files.size());
         return pdfAttachment(pdfBytes, "merged.pdf");
     }
 
@@ -97,8 +106,40 @@ public class ConversionController {
             @RequestParam("files") List<MultipartFile> files,
             @RequestParam("targetPercentage") int targetPercentage
     ) {
+        log.info("Combined workflow requested for {} files with target {}", files == null ? 0 : files.size(), targetPercentage);
         byte[] pdfBytes = conversionService.convertMergeAndOptionallyCompress(files, targetPercentage);
+        log.info("Combined workflow completed for {} files with target {}", files == null ? 0 : files.size(), targetPercentage);
         return pdfAttachment(pdfBytes, "combined.pdf");
+    }
+
+    @PostMapping(path = "/api/pdf/rotate", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+            summary = "Rotate a file anti-clockwise",
+            description = "Accepts a supported file or PDF, converts non-PDF inputs to PDF, and rotates every page anti-clockwise by 90, 180, or 270 degrees.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Rotated PDF returned"),
+                    @ApiResponse(responseCode = "400", description = "Invalid file or rotation angle")
+            }
+    )
+    public ResponseEntity<byte[]> rotate(
+            @RequestParam("file") @NotNull MultipartFile file,
+            @RequestParam("anticlockwiseDegrees") int anticlockwiseDegrees
+    ) {
+        log.info("Rotate requested for file {} by {} degrees anti-clockwise", safeFilename(file), anticlockwiseDegrees);
+        FileToPdfConversionService.ProcessedFile rotated = conversionService.rotateFile(file, anticlockwiseDegrees);
+        log.info("Rotate completed for file {} by {} degrees anti-clockwise", safeFilename(file), anticlockwiseDegrees);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(rotated.contentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
+                        .filename(rotated.filename())
+                        .build()
+                        .toString())
+                .body(rotated.bytes());
+    }
+
+    private String safeFilename(MultipartFile file) {
+        String filename = file == null ? null : file.getOriginalFilename();
+        return filename == null || filename.isBlank() ? "<unnamed>" : filename;
     }
 
     private String extractBaseName(String filename) {

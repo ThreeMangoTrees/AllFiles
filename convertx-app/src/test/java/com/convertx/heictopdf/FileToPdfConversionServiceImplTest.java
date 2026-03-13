@@ -8,8 +8,11 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.awt.Color;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
+import javax.imageio.ImageIO;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -138,6 +141,60 @@ class FileToPdfConversionServiceImplTest {
 
         try (PDDocument document = PDDocument.load(bytes)) {
             assertEquals(2, document.getNumberOfPages());
+        }
+    }
+
+    @Test
+    void shouldRotatePdfAntiClockwise() throws IOException {
+        MockMultipartFile file = new MockMultipartFile("file", "source.pdf", "application/pdf", samplePdfBytes());
+
+        FileToPdfConversionService.ProcessedFile rotated = service.rotateFile(file, 90);
+
+        assertEquals("source-rotated-90.pdf", rotated.filename());
+        assertEquals("application/pdf", rotated.contentType());
+
+        try (PDDocument document = PDDocument.load(rotated.bytes())) {
+            assertEquals(270, document.getPage(0).getRotation());
+        }
+    }
+
+    @Test
+    void shouldRejectInvalidRotationTarget() throws IOException {
+        MockMultipartFile file = new MockMultipartFile("file", "source.pdf", "application/pdf", samplePdfBytes());
+
+        assertThrows(ResponseStatusException.class, () -> service.rotateFile(file, 45));
+    }
+
+    @Test
+    void shouldRotateJpegAndPreserveFormat() throws IOException {
+        BufferedImage image = new BufferedImage(80, 40, BufferedImage.TYPE_INT_RGB);
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        ImageIO.write(image, "jpg", outputStream);
+        MockMultipartFile file = new MockMultipartFile("file", "photo.jpg", "image/jpeg", outputStream.toByteArray());
+
+        FileToPdfConversionService.ProcessedFile rotated = service.rotateFile(file, 90);
+
+        assertEquals("photo-rotated-90.jpg", rotated.filename());
+        assertEquals("image/jpeg", rotated.contentType());
+
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(rotated.bytes())) {
+            BufferedImage rotatedImage = ImageIO.read(inputStream);
+            assertEquals(40, rotatedImage.getWidth());
+            assertEquals(80, rotatedImage.getHeight());
+        }
+    }
+
+    @Test
+    void shouldRotateTextFileByConvertingToPdf() throws IOException {
+        MockMultipartFile file = new MockMultipartFile("file", "notes.txt", "text/plain", "hello".getBytes());
+
+        FileToPdfConversionService.ProcessedFile rotated = service.rotateFile(file, 90);
+
+        assertEquals("notes-rotated-90.pdf", rotated.filename());
+        assertEquals("application/pdf", rotated.contentType());
+
+        try (PDDocument document = PDDocument.load(rotated.bytes())) {
+            assertEquals(270, document.getPage(0).getRotation());
         }
     }
 
