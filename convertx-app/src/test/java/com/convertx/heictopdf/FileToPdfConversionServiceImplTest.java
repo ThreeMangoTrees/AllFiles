@@ -219,6 +219,12 @@ class FileToPdfConversionServiceImplTest {
     }
 
     @Test
+    void shouldReturnJpgForRotatedHeicImages() {
+        assertEquals("jpg", service.rotatedImageOutputExtension("heic"));
+        assertEquals("jpeg", service.rotatedImageOutputExtension("jpeg"));
+    }
+
+    @Test
     void shouldRotateTextFileByConvertingToPdf() throws IOException {
         MockMultipartFile file = new MockMultipartFile("file", "notes.txt", "text/plain", "hello".getBytes());
 

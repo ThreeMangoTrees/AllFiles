@@ -115,7 +115,7 @@ public class ConversionController {
     @PostMapping(path = "/api/pdf/rotate", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(
             summary = "Rotate a file anti-clockwise",
-            description = "Accepts a supported file or PDF, converts non-PDF inputs to PDF, and rotates every page anti-clockwise by 90, 180, or 270 degrees.",
+            description = "Accepts a supported file or PDF, converts non-PDF inputs to PDF when needed, rotates every page anti-clockwise by 90, 180, or 270 degrees, and returns HEIC image rotations as JPG.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "Rotated PDF returned"),
                     @ApiResponse(responseCode = "400", description = "Invalid file or rotation angle")

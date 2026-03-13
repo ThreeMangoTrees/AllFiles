@@ -396,7 +396,12 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
             byte[] rotatedBytes = "heic".equals(extension)
                     ? rotateHeic(file, anticlockwiseDegrees)
                     : rotateRasterImage(file, extension, anticlockwiseDegrees);
-            return new ProcessedFile(rotatedBytes, baseName + "-rotated-" + anticlockwiseDegrees + "." + extension, contentTypeForExtension(extension));
+            String outputExtension = rotatedImageOutputExtension(extension);
+            return new ProcessedFile(
+                    rotatedBytes,
+                    baseName + "-rotated-" + anticlockwiseDegrees + "." + outputExtension,
+                    contentTypeForExtension(outputExtension)
+            );
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Rotation was interrupted.", ex);
@@ -423,7 +428,7 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
 
     private byte[] rotateHeic(MultipartFile file, int anticlockwiseDegrees) throws IOException, InterruptedException {
         Path inputFile = Files.createTempFile("convertx-rotate-input-", ".heic");
-        Path outputFile = Files.createTempFile("convertx-rotate-output-", ".heic");
+        Path outputFile = Files.createTempFile("convertx-rotate-output-", ".jpg");
 
         try {
             file.transferTo(inputFile);
@@ -729,6 +734,10 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
             case "heic" -> "image/heic";
             default -> "application/octet-stream";
         };
+    }
+
+    String rotatedImageOutputExtension(String extension) {
+        return "heic".equals(extension) ? "jpg" : extension;
     }
 
     private String safeFilename(MultipartFile file) {

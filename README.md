@@ -203,7 +203,8 @@ curl -X POST \
 
 - `docx`, `xlsx`, and `pptx` are converted through LibreOffice in headless mode.
 - `heic` conversion uses ImageMagick (`magick` or `convert`) or `heif-convert`.
-- `heic` rotation uses ImageMagick and therefore requires HEIC delegate support in the installed ImageMagick package.
+- `heic` rotation currently returns a `jpg` file because HEIC encoding support is not reliably available in Linux deployments.
+- `TODO`: implement native HEIC-to-HEIC rotation support so rotated HEIC uploads remain in HEIC format instead of being converted to JPG.
 - Image formats currently convert the first image frame/page into a single-page PDF.
 - PDF compression uses Ghostscript profiles that roughly target 25%, 50%, or 75% size classes; exact output size depends on the source PDF, and the original PDF is returned if recompression would make it larger.
 - PDF merge preserves the input order of the uploaded files.
