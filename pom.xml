@@ -14,8 +14,8 @@
     <artifactId>convertx-parent</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <name>convertx-parent</name>
-    <description>Parent project for ConvertX modules</description>
+    <name>fileoperationsxxx-parent</name>
+    <description>Parent project for FileOperationsXXX modules</description>
 
     <properties>
         <java.version>25</java.version>

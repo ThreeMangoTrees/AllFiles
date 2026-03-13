@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ConvertX PDF Tools</title>
+    <title>FileOperationsXXX PDF Tools</title>
     <style>
         :root {
             color-scheme: light;
@@ -96,7 +97,6 @@
 
         .eyebrow {
             margin: 0 0 10px;
-            text-transform: uppercase;
             letter-spacing: 0.12em;
             font-size: 0.75rem;
             color: var(--accent);
@@ -162,254 +162,267 @@
         }
     </style>
 </head>
+
 <body>
-<main>
-    <section class="hero">
-        <div class="hero-copy">
-            <p class="eyebrow">ConvertX</p>
-            <h1>Convert, compress, and merge PDFs.</h1>
-            <p class="intro">Turn common files into PDF, compress an existing PDF with 25%, 50%, or 75% compression profiles, or merge two or more PDFs into one document.</p>
-        </div>
-        <form id="combinedForm" class="hero-form">
-            <input id="combinedFiles" type="file" name="files" accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.pptx,.tiff,.gif,.bmp,.txt,.rtf,.html,.htm,.heic,application/pdf,image/heic,image/jpeg,image/tiff,image/gif,image/bmp" multiple required>
-            <select id="combinedTargetPercentage" name="targetPercentage">
-                <option value="100">100% keep original PDF quality</option>
-                <option value="75">75% size profile</option>
-                <option value="50">50% size profile</option>
-                <option value="25">25% size profile</option>
-            </select>
-            <button type="submit">Create Combined PDF</button>
-            <div class="hint">Upload two or more supported files. Non-PDF files are converted first, then everything is merged in the same order. Choose 100% to skip compression.</div>
-            <div id="combinedStatus" class="status"></div>
-        </form>
-    </section>
-
-    <section class="grid">
-        <article class="tool-card">
-            <p class="eyebrow">Convert</p>
-            <h2>Any supported file to PDF</h2>
-            <p>Accepts <code>docx</code>, <code>xlsx</code>, <code>pptx</code>, <code>jpg</code>, <code>jpeg</code>, <code>tiff</code>, <code>gif</code>, <code>bmp</code>, <code>txt</code>, <code>rtf</code>, <code>html</code>, <code>htm</code>, and <code>heic</code>.</p>
-            <form id="convertForm">
-                <input id="convertFile" type="file" name="file" accept=".docx,.xlsx,.jpg,.jpeg,.pptx,.tiff,.gif,.bmp,.txt,.rtf,.html,.htm,.heic,image/heic,image/jpeg,image/tiff,image/gif,image/bmp" required>
-                <button type="submit">Convert File</button>
-                <div id="convertStatus" class="status"></div>
-            </form>
-        </article>
-
-        <article class="tool-card">
-            <p class="eyebrow">Rotate</p>
-            <h2>Rotate PDFs, images, and text files</h2>
-            <p>Upload a PDF, image, or text file and rotate it anti-clockwise by 90, 180, or 270 degrees. Images stay in the same format, while text files are converted to PDF first.</p>
-            <form id="rotateForm">
-                <input id="rotateFile" type="file" name="file" accept=".pdf,.jpg,.jpeg,.tiff,.gif,.bmp,.heic,.txt,.rtf,.html,.htm,application/pdf,image/heic,image/jpeg,image/tiff,image/gif,image/bmp,text/plain,text/html,application/rtf" required>
-                <select id="anticlockwiseDegrees" name="anticlockwiseDegrees">
-                    <option value="90">90 degrees anti-clockwise</option>
-                    <option value="180">180 degrees anti-clockwise</option>
-                    <option value="270">270 degrees anti-clockwise</option>
-                </select>
-                <button type="submit">Rotate File</button>
-                <div id="rotateStatus" class="status"></div>
-            </form>
-        </article>
-
-        <article class="tool-card">
-            <p class="eyebrow">Compress</p>
-            <h2>Reduce a PDF</h2>
-            <p>Upload one PDF and choose a compression profile. Higher compression usually means lower fidelity.</p>
-            <form id="compressForm">
-                <input id="compressFile" type="file" name="file" accept=".pdf,application/pdf" required>
-                <select id="targetPercentage" name="targetPercentage">
-                    <option value="25">25% size profile</option>
-                    <option value="50">50% size profile</option>
+    <main>
+        <section class="hero">
+            <div class="hero-copy">
+                <p class="eyebrow">FileOperationsXXX</p>
+                <h2>Convert, Merge, Compress - Three Actions 1 Click</h2>
+                <p class="intro">Upload two or more supported files. Non-PDF files are converted first, then everything
+                    is merged in the same order. Choose 100% to skip compression.</p>
+            </div>
+            <form id="combinedForm" class="hero-form">
+                <input id="combinedFiles" type="file" name="files"
+                    accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.pptx,.tiff,.gif,.bmp,.txt,.rtf,.html,.htm,.heic,application/pdf,image/heic,image/jpeg,image/tiff,image/gif,image/bmp"
+                    multiple required>
+                <select id="combinedTargetPercentage" name="targetPercentage">
+                    <option value="100">100% keep original PDF quality</option>
                     <option value="75">75% size profile</option>
+                    <option value="50">50% size profile</option>
+                    <option value="25">25% size profile</option>
                 </select>
-                <button type="submit">Compress PDF</button>
-                <div class="hint">Compression uses Ghostscript profiles. Output size is approximate, not guaranteed exact.</div>
-                <div id="compressStatus" class="status"></div>
+                <button type="submit">Create Combined PDF</button>
+                <div id="combinedStatus" class="status"></div>
             </form>
-        </article>
+        </section>
 
-        <article class="tool-card">
-            <p class="eyebrow">Merge</p>
-            <h2>Combine multiple PDFs</h2>
-            <p>Upload two or more PDFs. Files are merged in the order you select them.</p>
-            <form id="mergeForm">
-                <input id="mergeFiles" type="file" name="files" accept=".pdf,application/pdf" multiple required>
-                <button type="submit">Merge PDFs</button>
-                <div id="mergeStatus" class="status"></div>
-            </form>
-        </article>
-    </section>
-</main>
+        <section class="grid">
+            <article class="tool-card">
+                <p class="eyebrow">Convert</p>
+                <h2>Any supported file to PDF</h2>
+                <p>Accepts <code>docx</code>, <code>xlsx</code>, <code>pptx</code>, <code>jpg</code>, <code>jpeg</code>,
+                    <code>tiff</code>, <code>gif</code>, <code>bmp</code>, <code>txt</code>, <code>rtf</code>,
+                    <code>html</code>, <code>htm</code>, and <code>heic</code>.
+                </p>
+                <form id="convertForm">
+                    <input id="convertFile" type="file" name="file"
+                        accept=".docx,.xlsx,.jpg,.jpeg,.pptx,.tiff,.gif,.bmp,.txt,.rtf,.html,.htm,.heic,image/heic,image/jpeg,image/tiff,image/gif,image/bmp"
+                        required>
+                    <button type="submit">Convert File</button>
+                    <div id="convertStatus" class="status"></div>
+                </form>
+            </article>
 
-<script>
-    function baseName(filename, fallback) {
-        if (!filename) {
-            return fallback;
-        }
-        return filename.replace(/\.[^.]+$/i, '');
-    }
+            <article class="tool-card">
+                <p class="eyebrow">Rotate</p>
+                <h2>Rotate PDFs, images, and text files</h2>
+                <p>Upload a PDF, image, or text file and rotate it anti-clockwise by 90, 180, or 270 degrees. Images
+                    stay in the same format, while text files are converted to PDF first.</p>
+                <form id="rotateForm">
+                    <input id="rotateFile" type="file" name="file"
+                        accept=".pdf,.jpg,.jpeg,.tiff,.gif,.bmp,.heic,.txt,.rtf,.html,.htm,application/pdf,image/heic,image/jpeg,image/tiff,image/gif,image/bmp,text/plain,text/html,application/rtf"
+                        required>
+                    <select id="anticlockwiseDegrees" name="anticlockwiseDegrees">
+                        <option value="90">90 degrees anti-clockwise</option>
+                        <option value="180">180 degrees anti-clockwise</option>
+                        <option value="270">270 degrees anti-clockwise</option>
+                    </select>
+                    <button type="submit">Rotate File</button>
+                    <div id="rotateStatus" class="status"></div>
+                </form>
+            </article>
 
-    function filenameFromResponse(response) {
-        const contentDisposition = response.headers.get('Content-Disposition');
-        if (!contentDisposition) {
-            return null;
-        }
+            <article class="tool-card">
+                <p class="eyebrow">Compress</p>
+                <h2>Reduce a PDF</h2>
+                <p>Upload one PDF and choose a compression profile. Higher compression usually means lower fidelity.</p>
+                <form id="compressForm">
+                    <input id="compressFile" type="file" name="file" accept=".pdf,application/pdf" required>
+                    <select id="targetPercentage" name="targetPercentage">
+                        <option value="25">25% size profile</option>
+                        <option value="50">50% size profile</option>
+                        <option value="75">75% size profile</option>
+                    </select>
+                    <button type="submit">Compress PDF</button>
+                    <div class="hint">Compression uses Ghostscript profiles. Output size is approximate, not guaranteed
+                        exact.</div>
+                    <div id="compressStatus" class="status"></div>
+                </form>
+            </article>
 
-        const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
-        if (utf8Match) {
-            return decodeURIComponent(utf8Match[1]);
-        }
+            <article class="tool-card">
+                <p class="eyebrow">Merge</p>
+                <h2>Combine multiple PDFs</h2>
+                <p>Upload two or more PDFs. Files are merged in the order you select them.</p>
+                <form id="mergeForm">
+                    <input id="mergeFiles" type="file" name="files" accept=".pdf,application/pdf" multiple required>
+                    <button type="submit">Merge PDFs</button>
+                    <div id="mergeStatus" class="status"></div>
+                </form>
+            </article>
+        </section>
+    </main>
 
-        const asciiMatch = contentDisposition.match(/filename=\"?([^\";]+)\"?/i);
-        return asciiMatch ? asciiMatch[1] : null;
-    }
-
-    async function downloadResponse(response, filename) {
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        link.click();
-        URL.revokeObjectURL(url);
-    }
-
-    async function submitForm(options) {
-        const { form, status, buildRequest, filenameResolver, busyText, doneText } = options;
-
-        form.addEventListener('submit', async (event) => {
-            event.preventDefault();
-
-            try {
-                const request = buildRequest();
-                if (!request) {
-                    return;
-                }
-
-                status.textContent = busyText;
-                const response = await fetch(request.url, {
-                    method: 'POST',
-                    body: request.body
-                });
-
-                if (!response.ok) {
-                    status.textContent = await response.text();
-                    return;
-                }
-
-                const responseFilename = filenameFromResponse(response);
-                await downloadResponse(response, responseFilename || filenameResolver());
-                status.textContent = doneText;
-            } catch (error) {
-                status.textContent = error.message || 'Request failed.';
+    <script>
+        function baseName(filename, fallback) {
+            if (!filename) {
+                return fallback;
             }
+            return filename.replace(/\.[^.]+$/i, '');
+        }
+
+        function filenameFromResponse(response) {
+            const contentDisposition = response.headers.get('Content-Disposition');
+            if (!contentDisposition) {
+                return null;
+            }
+
+            const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+            if (utf8Match) {
+                return decodeURIComponent(utf8Match[1]);
+            }
+
+            const asciiMatch = contentDisposition.match(/filename=\"?([^\";]+)\"?/i);
+            return asciiMatch ? asciiMatch[1] : null;
+        }
+
+        async function downloadResponse(response, filename) {
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        async function submitForm(options) {
+            const { form, status, buildRequest, filenameResolver, busyText, doneText } = options;
+
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+
+                try {
+                    const request = buildRequest();
+                    if (!request) {
+                        return;
+                    }
+
+                    status.textContent = busyText;
+                    const response = await fetch(request.url, {
+                        method: 'POST',
+                        body: request.body
+                    });
+
+                    if (!response.ok) {
+                        status.textContent = await response.text();
+                        return;
+                    }
+
+                    const responseFilename = filenameFromResponse(response);
+                    await downloadResponse(response, responseFilename || filenameResolver());
+                    status.textContent = doneText;
+                } catch (error) {
+                    status.textContent = error.message || 'Request failed.';
+                }
+            });
+        }
+
+        const combinedFiles = document.getElementById('combinedFiles');
+        const combinedTargetPercentage = document.getElementById('combinedTargetPercentage');
+        submitForm({
+            form: document.getElementById('combinedForm'),
+            status: document.getElementById('combinedStatus'),
+            buildRequest: () => {
+                if (combinedFiles.files.length < 2) {
+                    document.getElementById('combinedStatus').textContent = 'Select at least two supported files.';
+                    return null;
+                }
+                const body = new FormData();
+                for (const file of combinedFiles.files) {
+                    body.append('files', file);
+                }
+                body.append('targetPercentage', combinedTargetPercentage.value);
+                return { url: '/api/pdf/convert-merge-compress', body };
+            },
+            filenameResolver: () => {
+                const names = Array.from(combinedFiles.files).slice(0, 2).map((file) => baseName(file.name, 'file'));
+                const mergedName = names.length === 2 ? names.join('-') : 'combined';
+                return mergedName + '.pdf';
+            },
+            busyText: 'Converting, merging, and processing...',
+            doneText: 'Combined PDF downloaded.'
         });
-    }
 
-    const combinedFiles = document.getElementById('combinedFiles');
-    const combinedTargetPercentage = document.getElementById('combinedTargetPercentage');
-    submitForm({
-        form: document.getElementById('combinedForm'),
-        status: document.getElementById('combinedStatus'),
-        buildRequest: () => {
-            if (combinedFiles.files.length < 2) {
-                document.getElementById('combinedStatus').textContent = 'Select at least two supported files.';
-                return null;
-            }
-            const body = new FormData();
-            for (const file of combinedFiles.files) {
-                body.append('files', file);
-            }
-            body.append('targetPercentage', combinedTargetPercentage.value);
-            return { url: '/api/pdf/convert-merge-compress', body };
-        },
-        filenameResolver: () => {
-            const names = Array.from(combinedFiles.files).slice(0, 2).map((file) => baseName(file.name, 'file'));
-            const mergedName = names.length === 2 ? names.join('-') : 'combined';
-            return mergedName + '.pdf';
-        },
-        busyText: 'Converting, merging, and processing...',
-        doneText: 'Combined PDF downloaded.'
-    });
+        const convertFile = document.getElementById('convertFile');
+        submitForm({
+            form: document.getElementById('convertForm'),
+            status: document.getElementById('convertStatus'),
+            buildRequest: () => {
+                if (!convertFile.files.length) {
+                    document.getElementById('convertStatus').textContent = 'Select a supported file first.';
+                    return null;
+                }
+                const body = new FormData();
+                body.append('file', convertFile.files[0]);
+                return { url: '/api/convert/to-pdf', body };
+            },
+            filenameResolver: () => baseName(convertFile.files[0].name, 'converted') + '.pdf',
+            busyText: 'Converting...',
+            doneText: 'PDF downloaded.'
+        });
 
-    const convertFile = document.getElementById('convertFile');
-    submitForm({
-        form: document.getElementById('convertForm'),
-        status: document.getElementById('convertStatus'),
-        buildRequest: () => {
-            if (!convertFile.files.length) {
-                document.getElementById('convertStatus').textContent = 'Select a supported file first.';
-                return null;
-            }
-            const body = new FormData();
-            body.append('file', convertFile.files[0]);
-            return { url: '/api/convert/to-pdf', body };
-        },
-        filenameResolver: () => baseName(convertFile.files[0].name, 'converted') + '.pdf',
-        busyText: 'Converting...',
-        doneText: 'PDF downloaded.'
-    });
+        const rotateFile = document.getElementById('rotateFile');
+        const anticlockwiseDegrees = document.getElementById('anticlockwiseDegrees');
+        submitForm({
+            form: document.getElementById('rotateForm'),
+            status: document.getElementById('rotateStatus'),
+            buildRequest: () => {
+                if (!rotateFile.files.length) {
+                    document.getElementById('rotateStatus').textContent = 'Select a supported file first.';
+                    return null;
+                }
+                const body = new FormData();
+                body.append('file', rotateFile.files[0]);
+                body.append('anticlockwiseDegrees', anticlockwiseDegrees.value);
+                return { url: '/api/pdf/rotate', body };
+            },
+            filenameResolver: () => rotateFile.files[0].name,
+            busyText: 'Rotating...',
+            doneText: 'Rotated file downloaded.'
+        });
 
-    const rotateFile = document.getElementById('rotateFile');
-    const anticlockwiseDegrees = document.getElementById('anticlockwiseDegrees');
-    submitForm({
-        form: document.getElementById('rotateForm'),
-        status: document.getElementById('rotateStatus'),
-        buildRequest: () => {
-            if (!rotateFile.files.length) {
-                document.getElementById('rotateStatus').textContent = 'Select a supported file first.';
-                return null;
-            }
-            const body = new FormData();
-            body.append('file', rotateFile.files[0]);
-            body.append('anticlockwiseDegrees', anticlockwiseDegrees.value);
-            return { url: '/api/pdf/rotate', body };
-        },
-        filenameResolver: () => rotateFile.files[0].name,
-        busyText: 'Rotating...',
-        doneText: 'Rotated file downloaded.'
-    });
+        const compressFile = document.getElementById('compressFile');
+        const targetPercentage = document.getElementById('targetPercentage');
+        submitForm({
+            form: document.getElementById('compressForm'),
+            status: document.getElementById('compressStatus'),
+            buildRequest: () => {
+                if (!compressFile.files.length) {
+                    document.getElementById('compressStatus').textContent = 'Select a PDF first.';
+                    return null;
+                }
+                const body = new FormData();
+                body.append('file', compressFile.files[0]);
+                body.append('targetPercentage', targetPercentage.value);
+                return { url: '/api/pdf/compress', body };
+            },
+            filenameResolver: () => baseName(compressFile.files[0].name, 'compressed') + '-compressed-' + targetPercentage.value + '.pdf',
+            busyText: 'Compressing...',
+            doneText: 'Compressed PDF downloaded.'
+        });
 
-    const compressFile = document.getElementById('compressFile');
-    const targetPercentage = document.getElementById('targetPercentage');
-    submitForm({
-        form: document.getElementById('compressForm'),
-        status: document.getElementById('compressStatus'),
-        buildRequest: () => {
-            if (!compressFile.files.length) {
-                document.getElementById('compressStatus').textContent = 'Select a PDF first.';
-                return null;
-            }
-            const body = new FormData();
-            body.append('file', compressFile.files[0]);
-            body.append('targetPercentage', targetPercentage.value);
-            return { url: '/api/pdf/compress', body };
-        },
-        filenameResolver: () => baseName(compressFile.files[0].name, 'compressed') + '-compressed-' + targetPercentage.value + '.pdf',
-        busyText: 'Compressing...',
-        doneText: 'Compressed PDF downloaded.'
-    });
-
-    const mergeFiles = document.getElementById('mergeFiles');
-    submitForm({
-        form: document.getElementById('mergeForm'),
-        status: document.getElementById('mergeStatus'),
-        buildRequest: () => {
-            if (mergeFiles.files.length < 2) {
-                document.getElementById('mergeStatus').textContent = 'Select at least two PDF files.';
-                return null;
-            }
-            const body = new FormData();
-            for (const file of mergeFiles.files) {
-                body.append('files', file);
-            }
-            return { url: '/api/pdf/merge', body };
-        },
-        filenameResolver: () => 'merged.pdf',
-        busyText: 'Merging...',
-        doneText: 'Merged PDF downloaded.'
-    });
-</script>
+        const mergeFiles = document.getElementById('mergeFiles');
+        submitForm({
+            form: document.getElementById('mergeForm'),
+            status: document.getElementById('mergeStatus'),
+            buildRequest: () => {
+                if (mergeFiles.files.length < 2) {
+                    document.getElementById('mergeStatus').textContent = 'Select at least two PDF files.';
+                    return null;
+                }
+                const body = new FormData();
+                for (const file of mergeFiles.files) {
+                    body.append('files', file);
+                }
+                return { url: '/api/pdf/merge', body };
+            },
+            filenameResolver: () => 'merged.pdf',
+            busyText: 'Merging...',
+            doneText: 'Merged PDF downloaded.'
+        });
+    </script>
 </body>
+
 </html>

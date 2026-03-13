@@ -11,8 +11,8 @@
     </parent>
 
     <artifactId>convertx-app</artifactId>
-    <name>convertx-app</name>
-    <description>Spring Boot application module for ConvertX</description>
+    <name>fileoperationsxxx-app</name>
+    <description>Spring Boot application module for FileOperationsXXX</description>
 
     <properties>
         <spring-boot.run.skip>false</spring-boot.run.skip>

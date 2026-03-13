@@ -352,10 +352,14 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
     }
 
     private void convertHeicToPng(Path inputFile, Path outputFile) throws IOException, InterruptedException {
-        runCommand(
-                new ProcessBuilder("sips", "-s", "format", "png", inputFile.toString(), "--out", outputFile.toString()),
-                "Unable to convert HEIC input with sips.",
-                "HEIC conversion requires the macOS 'sips' command."
+        runFirstSuccessfulCommand(
+                List.of(
+                        List.of("magick", inputFile.toString(), outputFile.toString()),
+                        List.of("convert", inputFile.toString(), outputFile.toString()),
+                        List.of("heif-convert", inputFile.toString(), outputFile.toString())
+                ),
+                "Unable to convert HEIC input.",
+                "HEIC conversion requires one of these commands on the PATH: 'magick', 'convert', or 'heif-convert'."
         );
     }
 
@@ -424,10 +428,13 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
         try {
             file.transferTo(inputFile);
             int clockwiseRotation = normalizeClockwiseRotation(anticlockwiseDegrees);
-            runCommand(
-                    new ProcessBuilder("sips", "-r", String.valueOf(clockwiseRotation), inputFile.toString(), "--out", outputFile.toString()),
-                    "Unable to rotate HEIC input with sips.",
-                    "HEIC rotation requires the macOS 'sips' command."
+            runFirstSuccessfulCommand(
+                    List.of(
+                            List.of("magick", inputFile.toString(), "-rotate", String.valueOf(clockwiseRotation), outputFile.toString()),
+                            List.of("convert", inputFile.toString(), "-rotate", String.valueOf(clockwiseRotation), outputFile.toString())
+                    ),
+                    "Unable to rotate HEIC input.",
+                    "HEIC rotation requires ImageMagick with either the 'magick' or 'convert' command on the PATH."
             );
             return Files.readAllBytes(outputFile);
         } finally {
@@ -444,15 +451,50 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
         );
     }
 
+    private void runFirstSuccessfulCommand(List<List<String>> commands, String failureMessage, String missingCommandMessage)
+            throws IOException, InterruptedException {
+        List<String> commandFailures = new ArrayList<>();
+        IOException lastStartException = null;
+
+        for (List<String> command : commands) {
+            try {
+                CommandResult result = executeCommand(new ProcessBuilder(command));
+                if (result.exitCode() == 0) {
+                    return;
+                }
+                commandFailures.add(command.get(0) + ": " + formatCommandOutput(result.output(), result.exitCode()));
+            } catch (IOException ex) {
+                lastStartException = ex;
+            }
+        }
+
+        if (commandFailures.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, missingCommandMessage, lastStartException);
+        }
+
+        throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                failureMessage + " Output: " + String.join(" | ", commandFailures)
+        );
+    }
+
     private void runCommand(ProcessBuilder processBuilder, String failureMessage, String missingCommandMessage)
             throws IOException, InterruptedException {
-        Process process;
         try {
-            process = processBuilder.redirectErrorStream(true).start();
+            CommandResult result = executeCommand(processBuilder);
+            if (result.exitCode() != 0) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        failureMessage + " Output: " + formatCommandOutput(result.output(), result.exitCode())
+                );
+            }
         } catch (IOException ex) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, missingCommandMessage, ex);
         }
+    }
 
+    private CommandResult executeCommand(ProcessBuilder processBuilder) throws IOException, InterruptedException {
+        Process process = processBuilder.redirectErrorStream(true).start();
         String output;
         try (Reader reader = new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8);
              StringWriter writer = new StringWriter()) {
@@ -461,9 +503,12 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
         }
 
         int exitCode = process.waitFor();
-        if (exitCode != 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, failureMessage + " Output: " + output.trim());
-        }
+        return new CommandResult(exitCode, output);
+    }
+
+    private String formatCommandOutput(String output, int exitCode) {
+        String trimmedOutput = output == null ? "" : output.trim();
+        return trimmedOutput.isEmpty() ? "exit code " + exitCode : trimmedOutput;
     }
 
     private String extractTextFromRtf(byte[] bytes) throws IOException {
@@ -673,5 +718,8 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
     private String safeFilename(MultipartFile file) {
         String filename = file == null ? null : file.getOriginalFilename();
         return filename == null || filename.isBlank() ? "<unnamed>" : filename;
+    }
+
+    private record CommandResult(int exitCode, String output) {
     }
 }

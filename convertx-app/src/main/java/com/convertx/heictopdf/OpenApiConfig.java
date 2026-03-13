@@ -11,13 +11,13 @@ import org.springframework.context.annotation.Configuration;
 public class OpenApiConfig {
 
     @Bean
-    public OpenAPI convertXOpenApi() {
+    public OpenAPI fileOperationsXXXOpenApi() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("ConvertX PDF Tools API")
+                        .title("FileOperationsXXX PDF Tools API")
                         .description("API for converting supported files to PDF, compressing PDFs, and merging multiple PDFs.")
                         .version("v1")
-                        .contact(new Contact().name("ConvertX"))
+                        .contact(new Contact().name("FileOperationsXXX"))
                         .license(new License().name("Internal Use")));
     }
 }
