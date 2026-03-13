@@ -92,6 +92,25 @@ The container image includes the native Linux dependencies required by the appli
 - Ghostscript for PDF compression
 - ImageMagick and `libheif` tools for HEIC conversion and rotation
 
+## Automatic deployment on GCP
+
+The repository now includes [cloudbuild.yaml](/Users/vinitkumar/Documents/AllFiles/cloudbuild.yaml) for Cloud Build based automatic deployment.
+
+The intended GCP setup is:
+
+- GitHub repository: `ThreeMangoTrees/AllFiles`
+- Branch trigger: `^main$`
+- Build config file: `cloudbuild.yaml`
+- Cloud Run service: `allfilesxxx`
+- Region: `us-west1`
+- Artifact Registry image path: `us-west1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/allfiles/allfilesxxx:$COMMIT_SHA`
+
+On each push to `main`, Cloud Build will:
+
+1. build the Docker image from the repo root `Dockerfile`
+2. push the image to Artifact Registry
+3. update the Cloud Run service with the new image
+
 ## Linux deployment
 
 Use this checklist before deploying the project to a Linux server.
