@@ -65,6 +65,75 @@ OpenAPI docs:
 - Swagger UI: `http://localhost:8081/swagger-ui.html`
 - OpenAPI JSON: `http://localhost:8081/api/docs`
 
+## Before launching to GCP
+
+Use this checklist before deploying the project to Google Cloud.
+
+1. Replace or disable the current HEIC implementation.
+
+- The current HEIC conversion and rotation flow depends on the macOS `sips` command.
+- GCP services such as Cloud Run and Compute Engine Linux VMs do not provide `sips`.
+- Before launching to GCP, either:
+  - replace `sips` with a Linux-compatible approach such as ImageMagick or `libheif`, or
+  - temporarily disable HEIC conversion and rotation in the deployed build
+
+2. Make the application listen on the GCP-provided port.
+
+- For Cloud Run, the application must listen on the `PORT` environment variable.
+- Update [application.properties](/Users/vinitkumar/Documents/ConvertX/convertx-app/src/main/resources/application.properties) so:
+
+```properties
+server.port=${PORT:8081}
+```
+
+3. Prepare a Linux runtime with the required native tools.
+
+- `soffice` is required for `docx`, `xlsx`, and `pptx`
+- `gs` is required for PDF compression
+- Your Docker image or VM startup process must install:
+  - LibreOffice
+  - Ghostscript
+
+4. Prefer a container-based deployment.
+
+- Because this app depends on native binaries, deploy it as a custom container rather than as source-only Java code.
+- For GCP, Cloud Run is the recommended target once the HEIC dependency is made Linux-compatible.
+
+5. Adjust logging for GCP operations.
+
+- Local file logging works for local development, but Cloud Run instances are ephemeral.
+- For GCP, keep console logging enabled so logs are collected by Cloud Logging.
+- The current file-based logs are configured in [logback-spring.xml](/Users/vinitkumar/Documents/ConvertX/convertx-app/src/main/resources/logback-spring.xml).
+
+6. Verify memory and request settings.
+
+- LibreOffice and Ghostscript can use significant memory during conversion and compression.
+- Choose a Cloud Run or VM size that gives enough headroom for:
+  - large uploads
+  - Office file conversion
+  - PDF merge/compression
+
+7. Build and test locally before deployment.
+
+```bash
+mvn test
+mvn -pl convertx-app -am package
+```
+
+8. If deploying to Cloud Run, be ready with GCP services enabled.
+
+- `run.googleapis.com`
+- `cloudbuild.googleapis.com`
+- `artifactregistry.googleapis.com`
+
+9. Recommended next implementation steps before deployment.
+
+- Add a `Dockerfile`
+- Change `server.port` to use `PORT`
+- Replace or disable `sips`-based HEIC handling
+- Decide whether to keep file logging, console logging, or both for GCP
+- Run an end-to-end test in a Linux environment before public launch
+
 ## API
 
 Convert a supported file to PDF:
