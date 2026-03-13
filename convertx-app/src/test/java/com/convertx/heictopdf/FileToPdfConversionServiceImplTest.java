@@ -112,7 +112,7 @@ class FileToPdfConversionServiceImplTest {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.compressPdf(file, 50));
 
         assertEquals(400, ex.getStatusCode().value());
-        assertTrue(ex.getReason().contains("The uploaded PDF file is invalid: source.pdf"));
+        assertTrue(ex.getReason().contains("The uploaded file content does not match its extension: source.pdf"));
     }
 
     @Test
@@ -175,7 +175,7 @@ class FileToPdfConversionServiceImplTest {
         );
 
         assertEquals(400, ex.getStatusCode().value());
-        assertTrue(ex.getReason().contains("The uploaded PDF file is invalid: source.pdf"));
+        assertTrue(ex.getReason().contains("The uploaded file content does not match its extension: source.pdf"));
     }
 
     @Test

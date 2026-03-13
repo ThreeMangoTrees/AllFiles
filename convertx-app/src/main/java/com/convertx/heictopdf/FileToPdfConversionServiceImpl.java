@@ -60,13 +60,22 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
     private static final float LEADING = 14f;
     private static final PDType1Font BODY_FONT = PDType1Font.HELVETICA;
     private final PdfCompressionService pdfCompressionService;
+    private final UploadedFileSecurityValidator uploadedFileSecurityValidator;
 
     public FileToPdfConversionServiceImpl() {
-        this(new GhostscriptPdfCompressionService());
+        this(new GhostscriptPdfCompressionService(), new UploadedFileSecurityValidator(new ApplicationSecurityProperties()));
     }
 
     FileToPdfConversionServiceImpl(PdfCompressionService pdfCompressionService) {
+        this(pdfCompressionService, new UploadedFileSecurityValidator(new ApplicationSecurityProperties()));
+    }
+
+    FileToPdfConversionServiceImpl(
+            PdfCompressionService pdfCompressionService,
+            UploadedFileSecurityValidator uploadedFileSecurityValidator
+    ) {
         this.pdfCompressionService = pdfCompressionService;
+        this.uploadedFileSecurityValidator = uploadedFileSecurityValidator;
     }
 
     @Override
@@ -553,6 +562,7 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
     }
 
     private byte[] validateAndReadPdfBytes(MultipartFile file) {
+        uploadedFileSecurityValidator.validate(file, "pdf");
         byte[] pdfBytes;
         try {
             pdfBytes = file.getBytes();
@@ -699,6 +709,7 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
             );
         }
 
+        uploadedFileSecurityValidator.validate(file, extension);
         return extension;
     }
 

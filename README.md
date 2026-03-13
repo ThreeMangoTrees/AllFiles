@@ -108,8 +108,27 @@ The intended GCP setup is:
 On each push to `main`, Cloud Build will:
 
 1. build the Docker image from the repo root `Dockerfile`
-2. push the image to Artifact Registry
-3. update the Cloud Run service with the new image
+2. run a `trivy` vulnerability scan and fail the build on `HIGH` or `CRITICAL` findings
+3. push the image to Artifact Registry
+4. update the Cloud Run service with the new image
+
+## Security
+
+The application now expects HTTP Basic authentication in deployed environments.
+
+- Username env var: `APP_BASIC_AUTH_USERNAME`
+- Password env var: `APP_BASIC_AUTH_PASSWORD`
+- API docs are disabled by default in deployed environments unless explicitly re-enabled
+- Per-client rate limiting is enabled by default for `/api/*`
+- Optional malware scanning can be enabled with:
+  - `APP_ANTIVIRUS_ENABLED=true`
+  - `APP_ANTIVIRUS_COMMAND=clamscan`
+
+Cloud Run deployments from [cloudbuild.yaml](/Users/vinitkumar/Documents/AllFiles/cloudbuild.yaml) now also:
+
+- set Cloud Run concurrency to `10`
+- inject the application password from Secret Manager secret `app-basic-auth-password`
+- keep Swagger and OpenAPI disabled by default
 
 ## Linux deployment
 

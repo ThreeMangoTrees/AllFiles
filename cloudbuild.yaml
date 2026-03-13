@@ -16,6 +16,17 @@ steps:
       - push
       - us-west1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/allfiles/allfilesxxx:$COMMIT_SHA
 
+  - name: aquasec/trivy:0.54.1
+    id: VulnerabilityScan
+    args:
+      - image
+      - --exit-code
+      - "1"
+      - --severity
+      - HIGH,CRITICAL
+      - --no-progress
+      - us-west1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/allfiles/allfilesxxx:$COMMIT_SHA
+
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
     id: Deploy
     entrypoint: gcloud
@@ -27,6 +38,9 @@ steps:
       - --platform=managed
       - --region=us-west1
       - --image=us-west1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/allfiles/allfilesxxx:$COMMIT_SHA
+      - --concurrency=10
+      - --update-env-vars=SPRINGDOC_API_DOCS_ENABLED=false,SPRINGDOC_SWAGGER_UI_ENABLED=false,APP_SECURITY_REQUIRE_AUTH=true,APP_BASIC_AUTH_USERNAME=fileoperationsxxx-admin,APP_RATE_LIMIT_ENABLED=true,APP_RATE_LIMIT_REQUESTS_PER_MINUTE=30
+      - --update-secrets=APP_BASIC_AUTH_PASSWORD=app-basic-auth-password:latest
       - --labels=managed-by=gcp-cloud-build-deploy-cloud-run,commit-sha=$COMMIT_SHA,gcb-build-id=$BUILD_ID
       - --quiet
 

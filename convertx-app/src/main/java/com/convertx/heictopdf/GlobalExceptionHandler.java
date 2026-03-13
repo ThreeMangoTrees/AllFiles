@@ -22,7 +22,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<String> handleResponseStatusException(ResponseStatusException ex, HttpServletRequest request) {
         HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
-        String message = messageOrFallback(ex.getReason(), "The request could not be completed.");
+        String message = status.is4xxClientError()
+                ? messageOrFallback(ex.getReason(), "The request could not be completed.")
+                : "Something went wrong while processing the file. Check the application logs and try again.";
         logAtLevel(status, request, message, ex);
         return plainText(status, message);
     }
