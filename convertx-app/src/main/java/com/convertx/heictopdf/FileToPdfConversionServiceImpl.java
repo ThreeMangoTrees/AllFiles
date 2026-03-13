@@ -528,13 +528,8 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
 
     private byte[] asPdfBytes(MultipartFile file) {
         String extension = getExtension(file);
-        try {
-            if ("pdf".equals(extension)) {
-                validatePdfFile(file);
-                return file.getBytes();
-            }
-        } catch (IOException ex) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Unable to read PDF input.", ex);
+        if ("pdf".equals(extension)) {
+            return validateAndReadPdfBytes(file);
         }
         return convert(file);
     }
@@ -547,6 +542,27 @@ public class FileToPdfConversionServiceImpl implements FileToPdfConversionServic
         String filename = file.getOriginalFilename();
         if (filename == null || !filename.toLowerCase(Locale.ROOT).endsWith(".pdf")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only .pdf files are supported for this operation.");
+        }
+
+        validateAndReadPdfBytes(file);
+    }
+
+    private byte[] validateAndReadPdfBytes(MultipartFile file) {
+        byte[] pdfBytes;
+        try {
+            pdfBytes = file.getBytes();
+        } catch (IOException ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Unable to read PDF input.", ex);
+        }
+
+        try (PDDocument ignored = PDDocument.load(pdfBytes)) {
+            return pdfBytes;
+        } catch (IOException ex) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "The uploaded PDF file is invalid: " + safeFilename(file),
+                    ex
+            );
         }
     }
 

@@ -106,6 +106,16 @@ class FileToPdfConversionServiceImplTest {
     }
 
     @Test
+    void shouldRejectInvalidPdfDuringCompression() {
+        MockMultipartFile file = new MockMultipartFile("file", "source.pdf", "application/pdf", "not-a-pdf".getBytes());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.compressPdf(file, 50));
+
+        assertEquals(400, ex.getStatusCode().value());
+        assertTrue(ex.getReason().contains("The uploaded PDF file is invalid: source.pdf"));
+    }
+
+    @Test
     void shouldRejectInvalidCompressionTarget() throws IOException {
         MockMultipartFile file = new MockMultipartFile("file", "source.pdf", "application/pdf", samplePdfBytes());
 
@@ -142,6 +152,30 @@ class FileToPdfConversionServiceImplTest {
         try (PDDocument document = PDDocument.load(bytes)) {
             assertEquals(2, document.getNumberOfPages());
         }
+    }
+
+    @Test
+    void shouldRejectInvalidPdfDuringCombinedWorkflow() throws IOException {
+        MockMultipartFile textFile = new MockMultipartFile(
+                "files",
+                "notes.txt",
+                "text/plain",
+                "one page".getBytes()
+        );
+        MockMultipartFile invalidPdf = new MockMultipartFile(
+                "files",
+                "source.pdf",
+                "application/pdf",
+                "not-a-pdf".getBytes()
+        );
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> service.convertMergeAndOptionallyCompress(List.of(textFile, invalidPdf), 100)
+        );
+
+        assertEquals(400, ex.getStatusCode().value());
+        assertTrue(ex.getReason().contains("The uploaded PDF file is invalid: source.pdf"));
     }
 
     @Test
